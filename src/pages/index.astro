@@ -1,0 +1,169 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Music Downloader">
+    <div id="center">
+        <div class="flex items-center justify-center gap-[10px] w-auto">
+            <img class="shadow_m" src="/album.svg" width="64px" />
+            <h1 class="shadow_m">Music Downloader</h1>
+        </div>
+        <div id="index" class="shadow_sm">
+            <div
+                id="search_box"
+                class="flex items-center justify-between gap-[10px]"
+            >
+                <button id="search" type="submit">Search</button>
+                <input id="input" type="text" placeholder="Search..." />
+            </div>
+            <h2>Results:</h2>
+            <div id="api_response">
+                <p>Search for a song to get started</p>
+            </div>
+        </div>
+    </div>
+</Layout>
+
+<script>
+    // Add script to call the api with the search query
+    const search_button = document.getElementById("search");
+    const api_response = document.getElementById("api_response");
+    const input_box = document.getElementById("input");
+
+    // For each download button add an event listener
+    function addDownloadButtons() {
+        const download_buttons = document.querySelectorAll(".download");
+
+        download_buttons.forEach(function (button) {
+            button.addEventListener("click", async (event) => {
+
+                const button = (event.target as Element)?.closest("button");
+                const title_element = button?.parentElement?.querySelector(".title");
+                const title: string = title_element?.textContent ?? "song";
+                const id = button?.id;
+
+                // Disable the button to prevent multiple downloads
+                if (button) {
+                    button.setAttribute("disabled", "true");
+                    button.classList.add("btn_disabled");
+                }
+
+                const json = {
+                    id: id,
+                };
+
+                const file = await fetch("/api/download", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(json),
+                });
+
+                // Check if file.body is null
+                if (file !== null) {
+                    const data = await file.blob();
+                    const blob = new Blob([data], { type: "audio/mpeg" });
+                    const url = URL.createObjectURL(blob);
+
+                    // Simulate a click on the link to download the file
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = slugify(title);
+                    a.click();
+
+                    // Remove the blob from memory
+                    URL.revokeObjectURL(url);
+
+                    // Enable the button again
+                    if (button) {
+                        button?.removeAttribute("disabled");
+                        button.classList.remove("btn_disabled");
+                    }
+                }
+            });
+        });
+    }
+
+    function slugify(str: string) {
+        return String(str)
+            .normalize('NFKD') // split accented characters into their base characters and diacritical marks
+            .replace(/[\u0300-\u036f]/g, '') // remove all the accents, which happen to be all in the \u03xx UNICODE block.
+            .trim() // trim leading or trailing whitespace
+            .replace(/-+/g, '-'); // remove consecutive hyphens
+    }
+
+    input_box?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            getVideos();
+        }
+    });
+
+    search_button?.addEventListener("click", async () => {
+        await getVideos();
+    });
+
+    async function getVideos() {
+        // Get the value of the search input
+        const search_input = document.getElementById(
+            "input"
+        ) as HTMLInputElement;
+
+        // Create an object with the search query to send to the api
+        const json = {
+            name: search_input?.value,
+        };
+
+        if (api_response) {
+            api_response.innerHTML = `<p>Loading...</p>`;
+        }
+
+        try {
+            const res = await fetch("/api/search", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(json),
+            });
+
+            if (!res.ok) {
+                throw new Error("Not OK!");
+            } else {
+                if (api_response) {
+                    // Parse the response as JSON
+                    const data = await res.json();
+
+                    // Return an array of videos containing the title and url
+                    api_response.innerHTML = data
+                        .map(
+                            (video: {
+                                url: string;
+                                id: string;
+                                title: string;
+                                thumbnail: string;
+                                length: string;
+                            }) => {
+                                return `
+                        <div class="item">
+                            <div class="image" style="background-image: url(${video.thumbnail});"></div>
+                            <div class"flex items-left">
+                                <p class="title">${video.title}</p>
+                                <p class="lenght">${video.length} minutes</p>
+                                <button id="${video.id}" class="download"><img class="mr-1" src="/download.svg" width="24px"><p>Download</p></button>
+                            </div>
+                        </div>
+                        `;
+                            }
+                        )
+                        .join("<br>");
+                    // Add the download buttons to the page
+                    addDownloadButtons();
+                }
+            }
+        } catch (error) {
+            console.warn("Fetch call failed");
+            console.error(error);
+        }
+    }
+</script>

@@ -1,0 +1,22 @@
+{
+  "name": "youtube-downloader",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.5.10",
+    "@astrojs/tailwind": "5.1.0",
+    "astro": "^4.7.0",
+    "js-file-download": "^0.4.12",
+    "tailwindcss": "3.4.3",
+    "typescript": "^5.4.5",
+    "youtube-search-scraper": "^1.0.1",
+    "ytdl-mp3": "^3.4.1"
+  }
+}
